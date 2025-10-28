@@ -71,6 +71,23 @@ Ainsi, cette étape confirme que la couche DAO fonctionne correctement et que la
 
 ## V. Créer le Web service Restfull qui permet de gérer des comptes
 
+Après avoir validé la couche d’accès aux données, nous avons développé un **Web Service RESTful** pour exposer les fonctionnalités de gestion des comptes bancaires via des **API HTTP**.
+Pour cela, une classe contrôleur appelée **`AccountRestController`** a été créée dans le répertoire `src/main/java/com/example/bankaccountservice/web`
+
+Cette classe, annotée avec `@RestController`, joue le rôle d’intermédiaire entre le client et la couche de persistance. Elle utilise le **`BankAccountRepository`** pour exécuter les opérations CRUD (Create, Read, Update, Delete) sur les comptes bancaires.
+
+Les principaux endpoints mis en place sont :
+
+* `GET /bankAccounts` → pour récupérer la liste de tous les comptes,
+* `GET /bankAccounts/{id}` → pour consulter un compte spécifique,
+* `POST /bankAccounts` → pour créer un nouveau compte,
+* `PUT /bankAccounts/{id}` → pour modifier un compte existant,
+* `DELETE /bankAccounts/{id}` → pour supprimer un compte.
+
+Chaque méthode du contrôleur repose sur les annotations **Spring Web** (`@GetMapping`, `@PostMapping`, `@PutMapping`, `@DeleteMapping`), qui simplifient la création des routes et la gestion des requêtes HTTP.
+
+Ainsi, ce Web Service RESTful constitue le cœur fonctionnel du microservice, permettant d’interagir avec les comptes bancaires à travers des appels API standard, tout en assurant une séparation claire entre la logique métier et la présentation des données.
+
 ## VI. Tester le web micro-service en utilisant un client REST comme Postman
 
 ## VII. Générer et tester le documentation Swagger de des API Rest du Web service
