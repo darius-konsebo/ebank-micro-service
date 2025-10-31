@@ -90,6 +90,57 @@ Ainsi, ce Web Service RESTful constitue le cœur fonctionnel du microservice, pe
 
 ## VI. Tester le web micro-service en utilisant un client REST comme Postman
 
+Une fois le Web Service RESTful mis en place, nous avons procédé à une phase de **tests pratiques** à l’aide de l’outil **Postman**, afin de vérifier le bon fonctionnement des différentes routes exposées par le microservice.
+
+Les tests ont porté sur les principales opérations CRUD suivantes :
+
+* **GET** → Pour récupérer la liste de tous les comptes bancaires, nous avons utilisé l’URL :
+
+  ```
+  http://localhost:8081/bankAccounts
+  ```
+
+  Cette requête retourne au format JSON la liste complète des comptes enregistrés dans la base H2.
+
+![Image3](screenshots/postman_GET.png)
+
+On peut aussi récupérer un compte bancaire en entrant son id dans l'url comme suit :
+
+  ```
+  http://localhost:8081/bankAccounts/{id}
+  ```
+
+![Image4](screenshots/postman_GETid.png)
+
+* **POST** → Pour créer un nouveau compte, nous avons utilisé la même URL :
+
+  ```
+  http://localhost:8081/bankAccounts
+  ```
+
+  En ajoutant dans les en-têtes (**Headers**) :
+
+  ```
+  Content-Type: application/json
+  ```
+
+  et en envoyant dans le corps (**Body**) un contenu JSON brut (**raw JSON**) contenant les informations du compte à créer (balance, currency, type, etc.).
+
+![Image5](screenshots/postman_POST.png)
+
+* **PUT** → Pour mettre à jour un compte existant, nous avons envoyé une requête vers :
+
+  ```
+  http://localhost:8081/bankAccounts/{id}
+  ```
+
+  où `{id}` correspond à l’identifiant du compte précédemment créé.
+  Le corps de la requête contient un nouveau JSON modifié, permettant de changer certaines valeurs comme le solde ou la devise.
+
+![Image6](screenshots/postman_PUT.png)
+
+Ces tests ont permis de confirmer le bon comportement du microservice, la persistance des données dans la base H2 et la cohérence des réponses JSON retournées par l’API.
+
 ## VII. Générer et tester le documentation Swagger de des API Rest du Web service
 
 ## VIII. Exposer une API Restful en utilisant Spring Data Rest en exploitant des projections 
