@@ -141,7 +141,56 @@ On peut aussi récupérer un compte bancaire en entrant son id dans l'url comme 
 
 Ces tests ont permis de confirmer le bon comportement du microservice, la persistance des données dans la base H2 et la cohérence des réponses JSON retournées par l’API.
 
-## VII. Générer et tester le documentation Swagger de des API Rest du Web service
+## VII. Générer et tester la documentation Swagger des API Rest du Web service
+
+Afin de documenter et de tester facilement les différentes routes du microservice, nous avons intégré **Swagger** à notre projet à l’aide de la bibliothèque **Springdoc OpenAPI**.
+
+Pour cela, nous avons ajouté la dépendance suivante dans le fichier `pom.xml`, récupérée depuis le dépôt officiel **Maven Repository** :
+
+```xml
+<!-- https://mvnrepository.com/artifact/org.springdoc/springdoc-openapi-ui -->
+<dependency>
+    <groupId>org.springdoc</groupId>
+    <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
+    <version>2.6.0</version>
+</dependency>
+```
+
+Une fois la dépendance installée, la documentation interactive est automatiquement générée et accessible via l’URL suivante :
+
+```
+http://localhost:8081/swagger-ui/index.html
+```
+
+Elle se présente comme suit :
+
+![Image7](screenshots/swagger.png)
+
+Depuis cette interface Swagger, nous avons pu **visualiser, tester et exécuter directement les requêtes HTTP** sur nos API REST — notamment les méthodes :
+
+* **GET** → récupération de tous les comptes :
+
+  ![Image8](screenshots/swagger_GET.png)
+
+* **POST** → création d’un nouveau compte :
+
+  ![Image9](screenshots/swagger_POST.png)
+
+* **GET /{id}** → consultation d’un compte précis :
+  ![Image10](screenshots/swagger_GETid.png)
+
+Swagger fournit également une **spécification OpenAPI** au format JSON accessible via :
+
+```
+http://localhost:8081/v3/api-docs
+```
+
+Ce lien a été **importé dans Postman**, ce qui a permis de générer automatiquement tous les endpoints du microservice et de les tester plus rapidement à partir de l’environnement Postman.
+
+Exemple de test avec la méthode GET :
+![Image11](screenshots/swagger_postman.png)
+
+Cette étape a ainsi facilité la **validation, la documentation et la maintenance** du Web Service REST, tout en offrant une interface claire pour les futurs développeurs et testeurs.
 
 ## VIII. Exposer une API Restful en utilisant Spring Data Rest en exploitant des projections 
 
