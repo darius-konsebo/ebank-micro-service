@@ -194,6 +194,73 @@ Cette étape a ainsi facilité la **validation, la documentation et la maintenan
 
 ## VIII. Exposer une API Restful en utilisant Spring Data Rest en exploitant des projections 
 
+Dans cette étape, nous avons enrichi notre microservice en exposant automatiquement les entités JPA sous forme d’API RESTful grâce à **Spring Data REST**.
+Pour cela, nous avons ajouté la dépendance suivante dans le fichier `pom.xml` :
+
+```xml
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-rest</artifactId>
+</dependency>
+```
+
+Cette dépendance permet à Spring Boot de générer automatiquement des endpoints REST basés sur les repositories JPA, sans avoir à écrire manuellement de contrôleur pour chaque opération.
+Ainsi l'accès aux comptes avec spring data rest se fait de la manière suivante :
+
+![Image12](screenshots/spring_data_rest.png)
+
+Afin d’organiser les routes, nous avons ajouté l’annotation `@RequestMapping("/api")` dans la classe `AccountRestController`, ce qui place toutes les routes REST du contrôleur sous le préfixe **/api**.
+
+Nous avons ensuite enrichi l’interface `BankAccountRepository` avec une **méthode de recherche personnalisée** permettant de filtrer les comptes par type :
+
+```java
+List<BankAccount> findByType(AccountType type);
+```
+
+et annoté le repository avec :
+
+```java
+@RepositoryRestResource
+```
+
+pour exposer directement les ressources via Spring Data REST.
+La méthode a également été annotée avec :
+
+```java
+@RestResource(path = "/byType")
+```
+
+et un alias de paramètre `@Param("t")` a été ajouté pour simplifier les requêtes.
+
+Exemple de recherche par type :
+
+![Image13](screenshots/findByType.png)
+
+Recherche simplifiée :
+
+![Image13](screenshots/findByType_alia.png)
+
+Pour améliorer la visualisation des données, nous avons créé l'interface `AccountProjection` dans le package `entities`, permettant de n’afficher qu’un sous-ensemble des attributs d’un compte (id, type, solde).
+Cette projection a été définie ainsi :
+
+```java
+@Projection(types = BankAccount.class, name = "p1")
+public interface AccountProjection {
+    String getId();
+    AccountType getType();
+    Double getBalance();
+}
+```
+
+Grâce à cette configuration, il est désormais possible d’interroger les comptes en précisant une projection, par exemple :
+
+```
+http://localhost:8081/bankAccounts?projection=p1
+```
+![Image14](screenshots/projection.png)
+
+Cette étape montre la puissance de **Spring Data REST**, qui permet d’exposer automatiquement les données tout en conservant la flexibilité des requêtes et la lisibilité des résultats grâce aux projections.
+
 ## IX. Créer les DTOs et Mappers
 
 ## X. Créer la couche Service (métier) et du micro service
