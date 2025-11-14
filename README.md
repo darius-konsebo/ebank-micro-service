@@ -263,7 +263,85 @@ Cette étape montre la puissance de **Spring Data REST**, qui permet d’exposer
 
 ## IX. Créer les DTOs et Mappers
 
+Pour structurer les échanges de données entre le client et le serveur, nous avons introduit une couche **DTO (Data Transfer Objects)**.
+L’objectif principal est de **découpler le modèle de données interne** (l’entité `BankAccount`) des objets exposés via les API, afin de respecter les bonnes pratiques d’architecture et de garantir une meilleure maintenabilité.
+
+Dans le package `dto`, deux classes ont été créées :
+
+- `BankAccountRequestDTO` :
+Ce DTO représente les données qu’un client envoie lorsqu’il souhaite créer un compte.
+Il contient uniquement les attributs nécessaires à la création, ce qui évite d’exposer des champs sensibles ou gérés automatiquement par l’application (comme l’ID ou la date de création).
+
+- `BankAccountResponseDTO` :
+Ce DTO est utilisé pour renvoyer la réponse au client.
+Il inclut notamment l’identifiant généré, la date de création, ainsi que tous les attributs pertinents du compte.
+
+Pour transformer les entités en DTOs, nous avons créé une classe **`AccountMapper`** dans un package dédié `mappers`.
+Ce mapper utilise `BeanUtils.copyProperties()` pour copier automatiquement les valeurs d’une entité vers un DTO de réponse.
+
+Cette approche permet :
+
+* d’éviter du code répétitif,
+* de centraliser la logique de transformation,
+* de rendre la couche Web totalement indépendante de la structure interne de l’entité.
+
+Les DTOs et le Mapper constituent ensemble la couche nécessaire pour un **échange de données propre, sécurisé et conforme aux bonnes pratiques REST**.
+
 ## X. Créer la couche Service (métier) et du micro service
+
+Pour respecter l’architecture en couches, nous avons ajouté une **couche Service**, qui joue le rôle d’intermédiaire entre le contrôleur REST et le repository JPA.
+Cette couche contient la logique métier, tandis que le contrôleur se limite au rôle d’interface API.
+
+Nous avons créé le package `service` contenant :
+
+- L’interface `AccountService` :
+Elle définit les opérations métiers disponibles.
+Pour l’instant, une méthode essentielle a été déclarée :
+
+**addAccount(...)** : créer un nouveau compte à partir d’un `BankAccountRequestDTO` et retourner un `BankAccountResponseDTO`.
+
+- La classe `AccountServiceImpl` :
+Elle constitue l’implémentation concrète de l’interface.
+On y trouve la logique métier suivante :
+
+  * génération automatique d’un **UUID** pour l’identifiant,
+  * initialisation de la date de création,
+  * conversion du DTO de requête vers un objet `BankAccount`,
+  * persistance du compte via le `BankAccountRepository`,
+  * transformation de l’entité sauvegardée en `BankAccountResponseDTO` grâce au `AccountMapper`.
+
+La classe est annotée avec :
+
+* `@Service` → pour être détectée par Spring,
+* `@Transactional` → pour garantir la cohérence des opérations en base.
+
+### Mise à jour du contrôleur selon les bonnes pratiques
+
+Dans le `AccountRestController`, la méthode POST a été modifiée pour utiliser la couche service plutôt que d’appeler directement le repository.
+Elle reçoit désormais un **BankAccountRequestDTO**, puis délègue la création du compte à `AccountService`.
+
+Cela permet :
+* de centraliser la logique métier dans le service,
+* d’éviter que le contrôleur manipule directement l’entité,
+* de garantir une architecture mieux structurée et extensible.
+
+Le contrôleur injecte maintenant :
+* `AccountService`,
+* `AccountMapper`.
+
+via un constructeur (meilleure pratique recommandée plutôt que `@Autowired` sur les champs).
+
+### Tests via Swagger
+
+Une fois ces éléments mis en place, nous avons testé la méthode POST directement depuis Swagger, en envoyant un `BankAccountRequestDTO` et en vérifiant que le `BankAccountResponseDTO` retourné contenait bien :
+
+* un ID généré automatiquement,
+* une date de création,
+* les informations fournies dans la requête.
+
+Exemple de requete :
+
+![Image15](screenshots/swagger_service.png)
 
 ## XI. Créer un Web service GraphQL pour ce Micro-service
 
