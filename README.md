@@ -238,7 +238,7 @@ Exemple de recherche par type :
 
 Recherche simplifiée :
 
-![Image13](screenshots/findByType_alia.png)
+![Image14](screenshots/findByType_alia.png)
 
 Pour améliorer la visualisation des données, nous avons créé l'interface `AccountProjection` dans le package `entities`, permettant de n’afficher qu’un sous-ensemble des attributs d’un compte (id, type, solde).
 Cette projection a été définie ainsi :
@@ -257,7 +257,7 @@ Grâce à cette configuration, il est désormais possible d’interroger les com
 ```
 http://localhost:8081/bankAccounts?projection=p1
 ```
-![Image14](screenshots/projection.png)
+![Image15](screenshots/projection.png)
 
 Cette étape montre la puissance de **Spring Data REST**, qui permet d’exposer automatiquement les données tout en conservant la flexibilité des requêtes et la lisibilité des résultats grâce aux projections.
 
@@ -341,13 +341,239 @@ Une fois ces éléments mis en place, nous avons testé la méthode POST directe
 
 Exemple de requete :
 
-![Image15](screenshots/swagger_service.png)
+![Image16](screenshots/swagger_service.png)
 
 ## XI. Créer un Web service GraphQL pour ce Micro-service
+
+### 1. Configuration et test du service GraphQL
+
+Après la définition du schéma GraphQL et la création du contrôleur GraphQL, nous avons configuré le comportement de GraphQL au niveau de l’application via le fichier `application.properties`.
+
+Deux propriétés ont été ajoutées :
+
+* **`spring.graphql.path=/graphql`**
+  Cette propriété permet de définir le point d’entrée principal du service GraphQL. Toutes les requêtes GraphQL sont ainsi exposées via l’URL :
+
+  ```
+  http://localhost:8081/graphiql
+  ```
+
+* **`spring.graphql.graphiql.enabled=true`**
+  Cette option permet d’activer **GraphiQL**, une interface web interactive permettant de tester les requêtes GraphQL directement depuis le navigateur.
+
+
+### Problème rencontré et solution adoptée
+
+Lors des tests, un **problème d’affichage et de chargement de l’interface GraphiQL dans le navigateur** a été rencontré, empêchant l’exécution correcte des requêtes GraphQL via cette interface.
+
+Afin de contourner ce problème et de poursuivre les tests, nous avons utilisé **Altair GraphQL Client**, un outil dédié aux requêtes GraphQL.
+Altair offre une interface stable et intuitive pour exécuter et tester les requêtes GraphQL.
+
+Toutes les requêtes ont alors été effectuées en utilisant l’URL suivante :
+
+```
+http://localhost:8081/graphql
+```
+
+Grâce à Altair, nous avons pu :
+
+* exécuter la requête `accountsList`,
+* visualiser les données retournées,
+* vérifier la bonne communication entre le schéma GraphQL, le contrôleur et la base de données.
+
+Voici le query pour voir tous les compte :
+![Image17](screenshots/test_Graphql.png)
+
+Voici le query pour voir un seul à partir de son id :
+![Image18](screenshots/accountById_Graphql.png)
+
+### 2. Gestion des erreurs dans le Web Service GraphQL
+
+Dans cette partie, nous avons mis en place une **gestion personnalisée des erreurs GraphQL**, afin de mieux contrôler les messages retournés au client en cas d’exception lors de l’exécution des requêtes.
+
+Pour cela, nous avons créé un package dédié **`exceptions`**, contenant la classe **`CustomDataFetcherExceptionResolver`**.
+Cette classe étend `DataFetcherExceptionResolverAdapter`, un mécanisme fourni par **Spring GraphQL** permettant d’intercepter les exceptions levées pendant l’exécution des requêtes GraphQL.
+
+La classe est annotée avec `@Component`, ce qui permet à Spring de la détecter automatiquement et de l’utiliser comme **résolveur global des erreurs GraphQL**.
+
+### Rôle du `CustomDataFetcherExceptionResolver`
+
+Cette implémentation permet :
+
+* de capturer toute exception levée dans les méthodes GraphQL (`@QueryMapping`, `@MutationMapping`),
+* de transformer l’exception Java en une **erreur GraphQL compréhensible côté client**,
+* de retourner un message clair et contrôlé via la méthode `getMessage()`.
+
+Ainsi, au lieu d’obtenir une erreur technique complexe ou une stack trace, le client reçoit une réponse GraphQL structurée contenant uniquement le message d’erreur pertinent.
+
+### Avantages de cette approche
+
+Cette gestion personnalisée des erreurs permet :
+
+* une **meilleure lisibilité des erreurs côté client**,
+* une **séparation claire entre la logique métier et la gestion des exceptions**,
+* une **sécurité renforcée**, en évitant d’exposer des détails internes de l’application.
+
+Grâce à cette configuration, le service GraphQL devient plus robuste et plus adapté à une utilisation en production, tout en offrant une expérience de test plus claire lors de l’utilisation d’outils comme **Altair**.
+
+Avant la gestion des erreurs nous avions cette sortie lors d'une erreur :
+![Image19](screenshots/avant_gestionErreur.png)
+
+Après la gestion des erreurs voici :
+![Image20](screenshots/après_gestionErreur.png)
+
+### 3. Ajout des mutations GraphQL (création, mise à jour et suppression)
+
+Dans cette partie, nous avons enrichi le Web Service GraphQL en ajoutant des **mutations**, permettant d’effectuer des opérations de **création, modification et suppression** des comptes bancaires.
+Contrairement aux requêtes (**Query**), les mutations sont utilisées pour modifier l’état des données.
+
+### Évolution du contrôleur GraphQL
+
+La classe **`BankAccountGraphQLController`** a été étendue afin de gérer à la fois :
+
+* des **requêtes GraphQL** (`@QueryMapping`),
+* des **mutations GraphQL** (`@MutationMapping`).
+
+Deux types de requêtes sont désormais disponibles :
+
+* récupération de la liste des comptes,
+* récupération d’un compte spécifique par son identifiant.
+
+Pour les mutations :
+
+* **ajout d’un compte** : délégation à la couche service (`AccountService`) afin de respecter l’architecture métier,
+* **mise à jour d’un compte** : passage de l’identifiant et des nouvelles données à la couche service,
+* **suppression d’un compte** : suppression directe via le repository.
+
+L’injection de `AccountService` dans le contrôleur permet de réutiliser la logique métier déjà implémentée pour les API REST, garantissant ainsi une cohérence entre les interfaces REST et GraphQL.
+
+### Mise à jour du schéma GraphQL
+
+Le fichier `schema.graphqls` a été mis à jour afin d’intégrer :
+
+* des **requêtes paramétrées** (`bankAccountById`),
+* un type **Mutation** pour gérer les opérations CRUD,
+* un type **input** (`BankAccountDTO`) utilisé pour transmettre les données lors des mutations.
+
+L’utilisation d’un type `input` permet de :
+
+* structurer les données envoyées par le client,
+* éviter l’exposition directe de l’entité,
+* rester cohérent avec l’approche DTO utilisée côté REST.
+
+### Résultat obtenu
+
+Grâce à cette configuration, le microservice permet désormais via GraphQL :
+
+* de consulter tous les comptes ou un compte précis,
+* d’ajouter un nouveau compte :
+  ![Image21](screenshots/addAccount.png)
+
+  ![Image22](screenshots/vue_addAccount.png)
+
+* de mettre à jour un compte existant :
+  ![Image23](screenshots/updateAccount.png)
+
+* de supprimer un compte :
+  ![Image24](screenshots/deleteAccount.png)
+
+
+Toutes ces opérations ont été testées avec succès à l’aide du client **Altair**, en interrogeant l’endpoint :
+
+```
+http://localhost:8081/graphql
+```
+
+Cette dernière étape complète l’implémentation du Web Service GraphQL et démontre la capacité du microservice à proposer des **interfaces REST et GraphQL complémentaires**, répondant aux standards modernes de développement.
+
+### 4. Ajout de l’entité `Customer` et gestion de la relation avec `BankAccount`
+
+Dans cette dernière partie, nous avons enrichi le microservice en introduisant une nouvelle entité **`Customer`**, représentant le propriétaire des comptes bancaires.
+Cette évolution permet de modéliser une relation réelle du domaine bancaire : **un client peut posséder plusieurs comptes**, tandis qu’un compte appartient à un seul client.
+
+### Création de l’entité `Customer`
+
+Une nouvelle classe **`Customer`** a été créée dans le package `entities`.
+Cette entité est définie comme une entité JPA et contient :
+
+* un identifiant généré automatiquement,
+* le nom du client,
+* une relation **OneToMany** avec l’entité `BankAccount`.
+
+L’attribut `bankAccounts` est annoté avec `@JsonProperty(access = WRITE_ONLY)` afin d’éviter les problèmes de sérialisation circulaire lors des échanges REST ou GraphQL.
+
+### Mise à jour de l’entité `BankAccount`
+
+L’entité `BankAccount` a été modifiée pour intégrer :
+
+* une relation **ManyToOne** vers l’entité `Customer`,
+* une annotation `@Enumerated(EnumType.STRING)` pour stocker le type de compte sous forme lisible en base de données.
+
+Cette configuration établit une relation bidirectionnelle entre les clients et leurs comptes, conforme aux bonnes pratiques JPA.
+
+### Initialisation des données au démarrage
+
+Le fichier principal de l’application a été mis à jour afin d’initialiser automatiquement :
+
+* une liste de clients,
+* plusieurs comptes bancaires associés à chaque client.
+
+Cette initialisation est réalisée via un `CommandLineRunner`, ce qui permet de disposer immédiatement de données exploitables au démarrage de l’application.
+Les données ont ensuite été **vérifiées à l’aide de la console H2**, confirmant la bonne création des relations entre les tables `Customer` et `BankAccount`.
+![Image25](screenshots/h2_customer_account.png)
+
+### Extension du schéma GraphQL
+
+Le schéma GraphQL a été enrichi pour prendre en charge la nouvelle entité `Customer`.
+Les modifications incluent :
+
+* l’ajout d’une requête `customers` pour récupérer la liste des clients,
+* l’ajout du type `Customer`,
+* l’intégration de la relation entre `Customer` et `BankAccount`.
+
+Grâce à GraphQL, il est désormais possible de :
+
+* récupérer la liste des comptes avec leurs propriétaires,
+* récupérer la liste des clients avec l’ensemble de leurs comptes bancaires.
+
+### Mise à jour du contrôleur GraphQL
+
+Une nouvelle méthode a été ajoutée dans le contrôleur GraphQL pour exposer la requête `customers`.
+Cette méthode s’appuie sur le repository des clients pour retourner la liste complète des clients enregistrés.
+
+### Tests avec Altair
+
+Les différentes requêtes GraphQL ont été testées avec succès à l’aide du client **Altair**.
+Ces tests ont permis de vérifier :
+
+* la récupération des comptes bancaires avec les informations du client associé :
+  ![Image26](screenshots/account_customer.png)
+
+* la récupération des clients avec l’ensemble de leurs comptes :
+  ![Image27](screenshots/customer_account.png)
+
+* le bon fonctionnement des relations entre les entités.
+
+L’ajout de l’entité `Customer` permet de rendre le microservice plus réaliste et plus complet.
+Cette étape démontre :
+
+* la maîtrise des **relations JPA**,
+* l’intégration fluide entre **REST, GraphQL et la couche métier**,
+* la puissance de **GraphQL** pour naviguer efficacement entre des données liées.
 
 ---
 
 ## Conclusion
+
+Cette activité pratique a permis de mettre en œuvre de manière progressive et concrète le **développement d’un microservice bancaire** basé sur **Spring Boot**, en respectant les principes des **architectures modernes et distribuées**.
+
+Tout au long de ce travail, nous avons abordé l’ensemble des couches essentielles d’un microservice : la modélisation des entités JPA, la persistance des données avec **Spring Data JPA**, l’exposition d’API **RESTful**, leur documentation avec **Swagger/OpenAPI**, ainsi que l’implémentation d’une **API GraphQL** complète intégrant requêtes, mutations et gestion personnalisée des erreurs.
+
+L’introduction des **DTOs, Mappers et de la couche Service** a permis de respecter les bonnes pratiques d’architecture logicielle en assurant une séparation claire des responsabilités entre les couches Web, Métier et Données. De plus, l’ajout de l’entité **Customer** et la gestion des relations entre les entités ont renforcé le réalisme du domaine métier et démontré la maîtrise des relations JPA et de leur exposition via GraphQL.
+
+Les différents tests réalisés à l’aide de **Postman**, **Swagger UI**, **Altair** et de la **console H2** ont permis de valider le bon fonctionnement du microservice et de ses différentes interfaces. Cette activité a ainsi permis de comparer et de comprendre les avantages des approches **REST** et **GraphQL** dans un contexte réel.
+
+En conclusion, cette activité pratique constitue une base solide pour la compréhension et la mise en œuvre de microservices Spring Boot professionnels, évolutifs et bien structurés, et prépare efficacement aux projets plus complexes en architectures distribuées et orientées services.
 
 ---
 
